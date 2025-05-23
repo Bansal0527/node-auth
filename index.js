@@ -1,24 +1,31 @@
-const express = require("express");
+const express = require('express');
+const mongoose = require('mongoose');
+const authRoutes = require('./routes/authRoutes');
+const cookieParser = require('cookie-parser');
+const csrf = require('csurf');
+const { requireAuth, checkUser } = require('./middleware/authMiddleware');
 const app = express();
 
-require('dotenv').config();
-const PORT= process.env.PORT || 4000
-
-const cookieParser = require("cookie-parser");
+// middleware
+app.use(express.static('public'));
+app.use(express.json());
 app.use(cookieParser());
-app.use(express.json()); // json data ko parse krne ke lie use krte h 
 
-require("./config/database").connect();
+// CSRF protection
+const csrfProtection = csrf({ cookie: true });
+app.use(csrfProtection);
 
+// view engine
+app.set('view engine', 'ejs');
 
-//import route and mount
+// database connection
+const dbURI = 'mongodb://localhost:27017/node-auth';
+mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex:true })
+  .then((result) => app.listen(3000))
+  .catch((err) => console.log(err));
 
-const user = require("./routes/user");
-
-app.use("/api/v1", user);
-
-//activate
-
-app.listen(PORT, ()=> {
-    console.log(`App is listening at port ${PORT}`);
-})
+// routes
+app.get('*', checkUser);
+app.get('/', (req, res) => res.render('home', { csrfToken: req.csrfToken() }));
+app.get('/smoothies', requireAuth, (req, res) => res.render('smoothies', { csrfToken: req.csrfToken() }));
+app.use(authRoutes);
