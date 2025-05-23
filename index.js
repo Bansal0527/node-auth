@@ -1,4 +1,5 @@
 const express = require("express");
+const csrfProtection = require("./middleware/csrf");
 const app = express();
 
 require('dotenv').config();
