@@ -1,24 +1,49 @@
-const express = require("express");
+const express = require('express');
+const csrf = require('csrf');
+const cookieParser = require('cookie-parser');
+
 const app = express();
 
-require('dotenv').config();
-const PORT= process.env.PORT || 4000
-
-const cookieParser = require("cookie-parser");
+// Middleware setup
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(express.json()); // json data ko parse krne ke lie use krte h 
 
-require("./config/database").connect();
+// CSRF protection setup
+const csrfProtection = csrf({
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  }
+});
 
+// Apply CSRF protection to all routes
+app.use((req, res, next) => {
+  // Skip CSRF for GET, HEAD, OPTIONS requests
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return next();
+  }
+  
+  try {
+    csrfProtection(req, res, next);
+  } catch (err) {
+    return res.status(403).json({ error: 'Invalid CSRF token' });
+  }
+});
 
-//import route and mount
+// Route to get CSRF token
+app.get('/csrf-token', (req, res) => {
+  const token = csrfProtection.create(req.csrfSecret || csrfProtection.secretSync());
+  res.json({ csrfToken: token });
+});
 
-const user = require("./routes/user");
+// Your existing routes go here
+// Make sure to include CSRF token in forms and AJAX requests
 
-app.use("/api/v1", user);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
-//activate
-
-app.listen(PORT, ()=> {
-    console.log(`App is listening at port ${PORT}`);
-})
+module.exports = app;
