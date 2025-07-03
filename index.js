@@ -1,24 +1,39 @@
-const express = require("express");
+const express = require('express');
+const csrf = require('csrf');
+const cookieParser = require('cookie-parser');
+
 const app = express();
 
-require('dotenv').config();
-const PORT= process.env.PORT || 4000
-
-const cookieParser = require("cookie-parser");
+// Middleware setup
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(express.json()); // json data ko parse krne ke lie use krte h 
 
-require("./config/database").connect();
+// CSRF protection setup
+const csrfProtection = csrf({
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  }
+});
 
+// Apply CSRF protection to all routes
+app.use(csrfProtection);
 
-//import route and mount
+// Middleware to provide CSRF token to views
+app.use((req, res, next) => {
+  res.locals.csrfToken = req.csrfToken();
+  next();
+});
 
-const user = require("./routes/user");
+// Your existing routes go here
+// Make sure to include the CSRF token in forms:
+// <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-app.use("/api/v1", user);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
-//activate
-
-app.listen(PORT, ()=> {
-    console.log(`App is listening at port ${PORT}`);
-})
+module.exports = app;
