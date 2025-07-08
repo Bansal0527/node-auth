@@ -1,5 +1,18 @@
 const express = require("express");
+const csrf = require('csrf');
 const app = express();
+
+// CSRF Protection
+const csrfProtection = csrf({
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  }
+});
+
+// Apply CSRF protection to all routes
+app.use(csrfProtection);
 
 require('dotenv').config();
 const PORT= process.env.PORT || 4000
