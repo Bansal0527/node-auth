@@ -1,0 +1,31 @@
+--- index.js
++++ index.js
+@@ -2,6 +2,7 @@
+ const app = express();
+ const mongoose = require('mongoose');
+ const dotenv = require('dotenv');
++const csrf = require('csurf-plus');
+ const routeUrls = require('./routes/routes');
+ const cors = require('cors');
+ const session = require('express-session');
+@@ -21,8 +22,19 @@
+         saveUninitialized: false,
+         // cookie: { secure: true } // Should be true in production with HTTPS
+     }));
++
++const csrfProtection = csrf();
++app.use(csrfProtection);
++
+ app.use(cors());
+ app.use('/app', routeUrls);
+ 
++app.use(function (err, req, res, next) {
++  if (err.code !== 'EBADCSRFTOKEN') return next(err);
++
++  // handle CSRF token errors here
++  res.status(403);
++  res.send('form tampered with');
++});
++
+ app.listen(4000, () => console.log("Server is up and running"));
+--- a/routes/routes.js
