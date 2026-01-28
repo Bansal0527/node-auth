@@ -1,24 +1,49 @@
-const express = require("express");
+const express = require('express');
+const session = require('express-session');
+const csrf = require('csurf');
+
 const app = express();
 
-require('dotenv').config();
-const PORT= process.env.PORT || 4000
+// Session middleware (required for CSRF)
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false } // Set to true in production with HTTPS
+}));
 
-const cookieParser = require("cookie-parser");
-app.use(cookieParser());
-app.use(express.json()); // json data ko parse krne ke lie use krte h 
+// Body parser middleware
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-require("./config/database").connect();
+// CSRF protection middleware
+const csrfProtection = csrf({ cookie: false });
+app.use(csrfProtection);
 
+// Make CSRF token available to all views
+app.use((req, res, next) => {
+  res.locals.csrfToken = req.csrfToken();
+  next();
+});
 
-//import route and mount
+// Error handler for CSRF token errors
+app.use((err, req, res, next) => {
+  if (err.code === 'EBADCSRFTOKEN') {
+    res.status(403).json({ error: 'Invalid CSRF token' });
+  } else {
+    next(err);
+  }
+});
 
-const user = require("./routes/user");
+// Your existing routes go here
+// Example route that provides CSRF token
+app.get('/csrf-token', (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
 
-app.use("/api/v1", user);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
-//activate
-
-app.listen(PORT, ()=> {
-    console.log(`App is listening at port ${PORT}`);
-})
+module.exports = app;
