@@ -24,7 +24,12 @@ exports.auth = (req,res, next) => {
 
         //verify the token
         try{
-            const payload = jwt.verify(token, process.env.JWT_SECRET);
+        // Security fix: Explicitly specify allowed algorithms to prevent algorithm confusion attacks
+        // This prevents attackers from changing the algorithm from RS256 to HS256 and forging tokens
+            const payload = jwt.verify(token, process.env.JWT_SECRET, { 
+                algorithms: ['HS256'], // Only allow HS256, reject algorithm switching attempts
+                ignoreExpiration: false // Enforce token expiration for security 
+            });
             console.log(payload);
             //why this ?
             req.user = payload;

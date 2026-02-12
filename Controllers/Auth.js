@@ -89,6 +89,8 @@ exports.login = async (req,res) => {
                                 process.env.JWT_SECRET,
                                 {
                                     expiresIn:"2h",
+                                    // Explicitly specify algorithm to prevent algorithm confusion attacks
+                                    algorithm:"HS256"
                                 });
 
                                 
