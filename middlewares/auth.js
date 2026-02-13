@@ -24,7 +24,7 @@ exports.auth = (req,res, next) => {
 
         //verify the token
         try{
-            const payload = jwt.verify(token, process.env.JWT_SECRET);
+            const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
             console.log(payload);
             //why this ?
             req.user = payload;

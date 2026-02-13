@@ -10,8 +10,42 @@ exports.signup = async (req,res) => {
     try{
         //get data
         const {name, email, password, role} = req.body;
-        //check if user already exist
-        const existingUser = await User.findOne({email});
+        
+        //Validate input types to prevent NoSQL injection
+        if(typeof name !== 'string' || typeof email !== 'string' || typeof password !== 'string') {
+            return res.status(400).json({
+                success:false,
+                message:'Invalid input types',
+            });
+        }
+        
+        //Validate password strength
+        if(password.length < 8) {
+            return res.status(400).json({
+                success:false,
+                message:'Password must be at least 8 characters long',
+            });
+        }
+        
+        //Check password complexity
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasNumbers = /\d/.test(password);
+        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+        
+        if(!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
+            return res.status(400).json({
+                success:false,
+                message:'Password must contain uppercase, lowercase, numbers, and special characters',
+            });
+        }
+        
+        //Whitelist allowed roles to prevent privilege escalation
+        const allowedRoles = ['Student', 'Admin'];
+        const userRole = allowedRoles.includes(role) ? role : 'Student';
+        
+        //check if user already exist - use string value explicitly
+        const existingUser = await User.findOne({email: String(email)});
 
         if(existingUser){
             return res.status(400).json({
@@ -32,9 +66,12 @@ exports.signup = async (req,res) => {
             });
         }
 
-        //create entry for User
+        //create entry for User - explicitly specify allowed fields only
         const user = await User.create({
-            name,email,password:hashedPassword,role
+            name: String(name),
+            email: String(email),
+            password: hashedPassword,
+            role: userRole
         })
 
         return res.status(200).json({
