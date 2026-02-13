@@ -27,6 +27,15 @@ exports.signup = async (req,res) => {
             });
         }
         
+        //Check against common weak passwords
+        const commonPasswords = ['password', '123456', '12345678', 'qwerty', 'abc123', 'password123', '111111', '123123', 'admin', 'letmein', 'welcome', 'monkey', '1234567890'];
+        if(commonPasswords.includes(password.toLowerCase())) {
+            return res.status(400).json({
+                success:false,
+                message:'Password is too common. Please choose a stronger password',
+            });
+        }
+        
         //Check password complexity
         const hasUpperCase = /[A-Z]/.test(password);
         const hasLowerCase = /[a-z]/.test(password);
