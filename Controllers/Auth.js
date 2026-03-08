@@ -4,18 +4,83 @@ const jwt = require("jsonwebtoken");
 const { options } = require("../routes/user");
 require("dotenv").config();
 
+// Comprehensive sanitization function to prevent NoSQL injection attacks
+const sanitizeInput = (input) => {
+    // If input is not an object, return as-is (strings, numbers, booleans, null)
+    if (typeof input !== 'object' || input === null) {
+        return input;
+    }
+    
+    // Handle arrays recursively
+    if (Array.isArray(input)) {
+        return input.map(item => sanitizeInput(item));
+    }
+    
+    // For objects, create a new sanitized object
+    const sanitized = {};
+    for (const key in input) {
+        if (!input.hasOwnProperty(key)) {
+            continue;
+        }
+        
+        // Remove keys that start with $ (MongoDB operators like $gt, $ne, $where, $regex)
+        if (key.startsWith('$')) {
+            continue;
+        }
+        
+        // Remove keys with dots (nested query operators like 'user.role')
+        if (key.includes('.')) {
+            continue;
+        }
+        
+        // Remove keys with special MongoDB characters
+        if (key.includes('$') || key.includes('{') || key.includes('}')) {
+            continue;
+        }
+        
+        // Recursively sanitize nested objects
+        const value = input[key];
+        // If value is an object, recursively sanitize it
+        if (typeof value === 'object' && value !== null) {
+            sanitized[key] = sanitizeInput(value);
+        } else {
+            sanitized[key] = value;
+        }
+    }
+    
+    return sanitized;
+};
 
 //signup route handler
 exports.signup = async (req,res) => {
     try{
-        //get data
-        const {name, email, password, role} = req.body;
+        // Sanitize all input to prevent NoSQL injection
+        const sanitizedBody = sanitizeInput(req.body);
+        
+        //get data with explicit validation
+        const {name, email, password, role} = sanitizedBody;
+        
+        // Validate all required fields are present
+        if(!name || !email || !password) {
+            return res.status(400).json({
+                success:false,
+                message:'All fields are required',
+            });
+        }
         
         //Validate input types to prevent NoSQL injection
         if(typeof name !== 'string' || typeof email !== 'string' || typeof password !== 'string') {
             return res.status(400).json({
                 success:false,
                 message:'Invalid input types',
+            });
+        }
+        
+        // Additional validation: ensure inputs are not empty strings
+        if(name.trim() === '' || email.trim() === '' || password.trim() === '') {
+            return res.status(400).json({
+                success:false,
+                message:'Fields cannot be empty',
             });
         }
         
@@ -75,7 +140,9 @@ exports.signup = async (req,res) => {
             });
         }
 
-        //create entry for User - explicitly specify allowed fields only
+        // Create entry for User with ONLY explicitly whitelisted fields
+        // NO request data is passed directly - each field is explicitly assigned
+        // This prevents NoSQL injection and privilege escalation attacks
         const user = await User.create({
             name: String(name),
             email: String(email),
@@ -102,9 +169,20 @@ exports.signup = async (req,res) => {
 //login
 exports.login = async (req,res) => {
     try {
+        // Sanitize all input to prevent NoSQL injection
+        const sanitizedBody = sanitizeInput(req.body);
 
         //data fetch
-        const {email, password} = req.body;
+        const {email, password} = sanitizedBody;
+        
+        //Validate input types to prevent NoSQL injection
+        if(typeof email !== 'string' || typeof password !== 'string') {
+            return res.status(400).json({
+                success:false,
+                message:'Invalid input types',
+            });
+        }
+        
         //validation on email and password
         if(!email || !password) {
             return res.status(400).json({
@@ -113,8 +191,8 @@ exports.login = async (req,res) => {
             });
         }
 
-        //check for registered user
-        let user = await User.findOne({email});
+        //check for registered user - use string value explicitly
+        let user = await User.findOne({email: String(email)});
         //if not a registered user
         if(!user) {
             return res.status(401).json({
