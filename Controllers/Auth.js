@@ -113,8 +113,16 @@ exports.login = async (req,res) => {
             });
         }
 
+        //Validate input types to prevent NoSQL injection
+        if(typeof email !== 'string' || typeof password !== 'string') {
+            return res.status(400).json({
+                success:false,
+                message:'Invalid input types',
+            });
+        }
+
         //check for registered user
-        let user = await User.findOne({email});
+        let user = await User.findOne({email: String(email)});
         //if not a registered user
         if(!user) {
             return res.status(401).json({
@@ -129,7 +137,7 @@ exports.login = async (req,res) => {
             role:user.role,
         };
         //verify password & generate a JWT token
-        if(await bcrypt.compare(password,user.password) ) {
+        if(await bcrypt.compare(String(password),user.password) ) {
             //password match
             let token =  jwt.sign(payload, 
                                 process.env.JWT_SECRET,
