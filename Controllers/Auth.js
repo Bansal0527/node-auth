@@ -4,12 +4,20 @@ const jwt = require("jsonwebtoken");
 const { options } = require("../routes/user");
 require("dotenv").config();
 
+// Sanitization function to prevent NoSQL injection
+const sanitizeInput = (input) => {
+    if (typeof input !== 'string') {
+        return '';
+    }
+    // Remove any MongoDB operators and dangerous characters
+    return input.replace(/[${}]/g, '');
+};
 
 //signup route handler
 exports.signup = async (req,res) => {
     try{
         //get data
-        const {name, email, password, role} = req.body;
+        let {name, email, password, role} = req.body;
         
         //Validate input types to prevent NoSQL injection
         if(typeof name !== 'string' || typeof email !== 'string' || typeof password !== 'string') {
@@ -17,6 +25,14 @@ exports.signup = async (req,res) => {
                 success:false,
                 message:'Invalid input types',
             });
+        }
+        
+        //Sanitize inputs to prevent NoSQL injection attacks
+        name = sanitizeInput(name);
+        email = sanitizeInput(email);
+        password = sanitizeInput(password);
+        if(role !== undefined) {
+            role = sanitizeInput(role);
         }
         
         //Validate password strength
@@ -104,7 +120,7 @@ exports.login = async (req,res) => {
     try {
 
         //data fetch
-        const {email, password} = req.body;
+        let {email, password} = req.body;
         //validation on email and password
         if(!email || !password) {
             return res.status(400).json({
@@ -112,6 +128,18 @@ exports.login = async (req,res) => {
                 message:'PLease fill all the details carefully',
             });
         }
+        
+        //Validate input types to prevent NoSQL injection
+        if(typeof email !== 'string' || typeof password !== 'string') {
+            return res.status(400).json({
+                success:false,
+                message:'Invalid input types',
+            });
+        }
+        
+        //Sanitize inputs to prevent NoSQL injection attacks
+        email = sanitizeInput(email);
+        password = sanitizeInput(password);
 
         //check for registered user
         let user = await User.findOne({email});
