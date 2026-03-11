@@ -10,7 +10,7 @@ const sanitizeInput = (input) => {
         return '';
     }
     // Remove any MongoDB operators and dangerous characters
-    return input.replace(/[${}]/g, '');
+    return input.replace(/[$.[]{}]/g, '');
 };
 
 //signup route handler
@@ -30,7 +30,6 @@ exports.signup = async (req,res) => {
         //Sanitize inputs to prevent NoSQL injection attacks
         name = sanitizeInput(name);
         email = sanitizeInput(email);
-        password = sanitizeInput(password);
         if(role !== undefined) {
             role = sanitizeInput(role);
         }
@@ -139,7 +138,6 @@ exports.login = async (req,res) => {
         
         //Sanitize inputs to prevent NoSQL injection attacks
         email = sanitizeInput(email);
-        password = sanitizeInput(password);
 
         //check for registered user
         let user = await User.findOne({email});
