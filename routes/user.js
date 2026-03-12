@@ -52,7 +52,7 @@ router.get("/admin", apiLimiter, auth, isAdmin, (req, res) => {
 router.get("/getEmail", apiLimiter, auth,async (req, res) => {
     try {
         // Role-based authorization: only Student or Admin roles can access
-        if(req.user.role !== 'Student' && req.user.role !== 'Admin') {
+        if(!['Student', 'Admin'].includes(req.user.role)) {
             return res.status(403).json({
                 success:false,
                 message:'Access denied. Invalid user role',
