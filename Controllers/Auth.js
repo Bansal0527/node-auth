@@ -112,9 +112,17 @@ exports.login = async (req,res) => {
                 message:'PLease fill all the details carefully',
             });
         }
+        
+        //Validate input types to prevent NoSQL injection
+        if(typeof email !== 'string' || typeof password !== 'string') {
+            return res.status(400).json({
+                success:false,
+                message:'Invalid input types',
+            });
+        }
 
-        //check for registered user
-        let user = await User.findOne({email});
+        //check for registered user - use string value explicitly to prevent NoSQL injection
+        let user = await User.findOne({email: String(email)});
         //if not a registered user
         if(!user) {
             return res.status(401).json({
