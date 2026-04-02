@@ -1,4 +1,5 @@
 const express = require("express");
+const csrf = require('csurf');
 const app = express();
 const rateLimit = require("express-rate-limit");
 
@@ -7,7 +8,11 @@ const PORT= process.env.PORT || 4000
 
 const cookieParser = require("cookie-parser");
 app.use(cookieParser());
-app.use(express.json()); // json data ko parse krne ke lie use krte h 
+app.use(express.json()); // json data ko parse krne ke lie use krte h
+
+// CSRF protection middleware
+const csrfProtection = csrf({ cookie: true });
+app.use(csrfProtection); 
 
 require("./config/database").connect();
 
